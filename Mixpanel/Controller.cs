@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using mixpanel.queue;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
@@ -31,8 +30,6 @@ namespace mixpanel
             MixpanelSettings.LoadSettings();
             if (Config.ManualInitialization) return;
             Initialize();
-            Mixpanel.Log($"Track Queue Depth: {MixpanelStorage.TrackPersistentQueue.CurrentCountOfItemsInQueue}");
-            Mixpanel.Log($"Engage Queue Depth: {MixpanelStorage.EngagePersistentQueue.CurrentCountOfItemsInQueue}");
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -86,7 +83,6 @@ namespace mixpanel
         {
             MigrateFrom1To2();
             DontDestroyOnLoad(this);
-            StartCoroutine(PopulatePools());
             Worker.StartWorkerThread();
             TrackIntegrationEvent();
             Mixpanel.Log($"Mixpanel Component Started");
@@ -112,20 +108,6 @@ namespace mixpanel
         {
             yield return request;
             MixpanelStorage.HasIntegratedLibrary = true;
-        }
-
-        private static IEnumerator PopulatePools()
-        {
-            for (int i = 0; i < Config.PoolFillFrames; i++)
-            {
-                Mixpanel.NullPool.Put(Value.Null);
-                for (int j = 0; j < Config.PoolFillEachFrame; j++)
-                {
-                    Mixpanel.ArrayPool.Put(Value.Array);
-                    Mixpanel.ObjectPool.Put(Value.Object);
-                }
-                yield return null;
-            }
         }
 
         #region InternalSDK
@@ -265,7 +247,7 @@ namespace mixpanel
         internal static void DoTrack(string eventName, Value properties)
         {
             if (!MixpanelStorage.IsTracking) return;
-            if (properties == null) properties = Mixpanel.ObjectPool.Get();
+            if (properties == null) properties = Value.Object;
             properties.Merge(GetEventsDefaultProperties());
             // These auto properties can change in runtime so we don't bake them into AutoProperties
             properties["$screen_width"] = Screen.width;
@@ -282,7 +264,7 @@ namespace mixpanel
             properties["token"] = MixpanelSettings.Instance.Token;
             properties["distinct_id"] = MixpanelStorage.DistinctId;
             properties["time"] = Util.CurrentTime();
-            Value data = Mixpanel.ObjectPool.Get();
+            Value data = Value.Object;
             data["event"] = eventName;
             data["properties"] = properties;
             data["$mp_metadata"] = Metadata.GetEventMetadata();

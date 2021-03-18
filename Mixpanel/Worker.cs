@@ -4,7 +4,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using mixpanel.queue;
 using System.Threading;
 using System.Net;
 using System.Net.Http;
@@ -228,10 +227,10 @@ namespace mixpanel
             switch (operation.GetAction())
             {
                 case ThreadOperation.ThreadOperationAction.ENQUEUE_EVENTS:
-                    EnqueueMixpanelQueue(MixpanelStorage.TrackPersistentQueue, data);
+                    MixpanelStorage.TrackPersistentQueue.Enqueue(data);
                     break;
                 case ThreadOperation.ThreadOperationAction.ENQUEUE_PEOPLE:
-                    EnqueueMixpanelQueue(MixpanelStorage.EngagePersistentQueue, data);
+                    MixpanelStorage.EngagePersistentQueue.Enqueue(data);
                     break;
                 case ThreadOperation.ThreadOperationAction.FLUSH:
                     if (_isBgThreadRunning)
@@ -246,10 +245,12 @@ namespace mixpanel
                         Controller.GetInstance().StartCoroutine(SendData(MixpanelStorage.TrackPersistentQueue, Config.TrackUrl));
                         Controller.GetInstance().StartCoroutine(SendData(MixpanelStorage.EngagePersistentQueue, Config.EngageUrl));
                     }
+
                     break;
+                            
                 case ThreadOperation.ThreadOperationAction.CLEAR_QUEUE:
-                    MixpanelStorage.TrackPersistentQueue.Clear();
-                    MixpanelStorage.EngagePersistentQueue.Clear();
+                        MixpanelStorage.TrackPersistentQueue.Clear();
+                        MixpanelStorage.EngagePersistentQueue.Clear();
                     break;
                 case ThreadOperation.ThreadOperationAction.KILL_THREAD:
                     _isBgThreadRunning = false;
@@ -260,25 +261,23 @@ namespace mixpanel
             }
         }
 
-        internal static IEnumerator SendData(PersistentQueue persistentQueue, string url)
+        internal static IEnumerator SendData(Queue<Value> queue, string url)
         {
-            if (persistentQueue.CurrentCountOfItemsInQueue == 0) yield break;
+            if (queue.Count == 0) yield break;
             
-            int depth = persistentQueue.CurrentCountOfItemsInQueue;
+            int depth = queue.Count;
             int numBatches = (depth / Config.BatchSize) + (depth % Config.BatchSize != 0 ? 1 : 0);
             for (int i = 0; i < numBatches; i++)
             {
                 if (_stopThread) yield break;
-                Value batch = Mixpanel.ArrayPool.Get();
-                using (PersistentQueueSession session = persistentQueue.OpenSession())
-                {
-                    int count = 0;
-                    while (count < Config.BatchSize)
+                Value batch = Value.Array;
+                int count = 0;
+                    while (count < Config.BatchSize && queue.Count > 0)
                     {
-                        byte[] data = session.Dequeue();
+                        Value data = queue.Dequeue();
                         if (data == null) break;
                         try {
-                            batch.Add(JsonUtility.FromJson<Value>(Encoding.UTF8.GetString(data)));
+                            batch.Add(data);
                         }
                         catch (Exception e) {
                             Mixpanel.LogError($"There was an error processing event [{count}] from the internal object pool: " + e);
@@ -324,8 +323,6 @@ namespace mixpanel
                     if (successful)
                     {
                         _retryCount = 0;
-                        session.Flush();
-                        Mixpanel.Put(batch);
                     }
                     else
                     {
@@ -340,17 +337,6 @@ namespace mixpanel
                         }, null, (int) retryIn, System.Threading.Timeout.Infinite);
                         yield break;
                     }
-                }
-            }
-        }
-
-        internal static void EnqueueMixpanelQueue(PersistentQueue persistentQueue, Value data)
-        {
-            using (PersistentQueueSession session = persistentQueue.OpenSession())
-            {
-                session.Enqueue(Encoding.UTF8.GetBytes(JsonUtility.ToJson(data)));
-                Mixpanel.Put(data);
-                session.Flush();
             }
         }
     }

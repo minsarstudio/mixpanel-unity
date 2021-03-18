@@ -1,5 +1,6 @@
-using mixpanel.queue;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEngine;
@@ -125,10 +126,10 @@ namespace mixpanel
             get
             {
                 if (_onceProperties != null) return _onceProperties;
-                if (!PlayerPrefs.HasKey(OncePropertiesName)) OnceProperties = Mixpanel.ObjectPool.Get();
+                if (!PlayerPrefs.HasKey(OncePropertiesName)) OnceProperties = Value.Object;
                 else
                 {
-                    _onceProperties = Mixpanel.ObjectPool.Get();
+                    _onceProperties = Value.Object;
                     JsonUtility.FromJsonOverwrite(PlayerPrefs.GetString(OncePropertiesName), _onceProperties);
                 }
                 return _onceProperties;
@@ -160,10 +161,10 @@ namespace mixpanel
             get
             {
                 if (_superProperties != null) return _superProperties;
-                if (!PlayerPrefs.HasKey(SuperPropertiesName)) SuperProperties = Mixpanel.ObjectPool.Get();
+                if (!PlayerPrefs.HasKey(SuperPropertiesName)) SuperProperties = Value.Object;
                 else
                 {
-                    _superProperties = Mixpanel.ObjectPool.Get(); 
+                    _superProperties = Value.Object; 
                     JsonUtility.FromJsonOverwrite(PlayerPrefs.GetString(SuperPropertiesName), _superProperties);
                 }
                 return _superProperties;
@@ -195,10 +196,10 @@ namespace mixpanel
             get
             {
                 if (_timedEvents != null) return _timedEvents;
-                if (!PlayerPrefs.HasKey(TimedEventsName)) TimedEvents = Mixpanel.ObjectPool.Get();
+                if (!PlayerPrefs.HasKey(TimedEventsName)) TimedEvents = Value.Object;
                 else 
                 {
-                    _timedEvents = Mixpanel.ObjectPool.Get();
+                    _timedEvents = Value.Object;
                     JsonUtility.FromJsonOverwrite(PlayerPrefs.GetString(TimedEventsName), _timedEvents);
                 }
                 return _timedEvents;
@@ -220,10 +221,10 @@ namespace mixpanel
         #endregion
 
         #region PersistentQueue
-
-        public static readonly PersistentQueue TrackPersistentQueue = new PersistentQueue(Path.Combine(Application.persistentDataPath, "mixpanel_track_queue"));
-
-        public static readonly PersistentQueue EngagePersistentQueue = new PersistentQueue(Path.Combine(Application.persistentDataPath, "mixpanel_engage_queue"));
+        
+        public static readonly Queue<Value> TrackPersistentQueue = new Queue<Value>();
+        
+        public static readonly Queue<Value> EngagePersistentQueue = new Queue<Value>();
 
         #endregion
     }

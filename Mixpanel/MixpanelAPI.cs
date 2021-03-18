@@ -49,7 +49,7 @@ namespace mixpanel
         {
             if (!IsInitialized()) return;
             if (alias == MixpanelStorage.DistinctId) return;
-            Value properties = ObjectPool.Get();
+            Value properties = Value.Object;
             properties["alias"] = alias;
             Track("$create_alias", properties);
             Flush();
@@ -121,7 +121,7 @@ namespace mixpanel
         {
             if (!IsInitialized()) return;
             MixpanelStorage.IsTracking = true;
-            Controller.DoTrack("$opt_in", ObjectPool.Get());
+            Controller.DoTrack("$opt_in", Value.Object);
         }
 
         /// <summary>
@@ -235,7 +235,7 @@ namespace mixpanel
         public static void Track(string eventName, string key, Value value)
         {
             if (!IsInitialized()) return;
-            Value properties = ObjectPool.Get();
+            Value properties = Value.Object;
             properties[key] = value;
             Controller.DoTrack(eventName, properties);
         }
