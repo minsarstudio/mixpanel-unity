@@ -68,7 +68,7 @@ namespace mixpanel
         void OnDestroy()
         {
             Mixpanel.Log($"Mixpanel Component Destroyed");
-            Worker.StopWorkerThread();
+            //Worker.StopWorkerThread();
         }
 
         void OnApplicationPause(bool pauseStatus)
@@ -83,7 +83,7 @@ namespace mixpanel
         {
             MigrateFrom1To2();
             DontDestroyOnLoad(this);
-            Worker.StartWorkerThread();
+            //Worker.StartWorkerThread();
             TrackIntegrationEvent();
             Mixpanel.Log($"Mixpanel Component Started");
             while (true)
